@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Payroll Audit Log{% endblock %}
+{% block page_title %}Payroll Audit Log{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <p class="text-muted">Immutable audit trail of all payroll actions</p>
+    <a href="{% url 'payroll:list' %}" class="btn btn-outline" id="backToPayrollBtn"><i class="fas fa-arrow-left"></i> Back to Payroll</a>
+</div>
+
+<!-- Period Filter -->
+<div class="card filter-card" style="margin-bottom: 1rem;">
+    <form method="get" class="filter-form" id="auditFilterForm">
+        <div class="filter-row">
+            <select name="period" class="form-select" id="auditPeriodFilter">
+                <option value="">All Periods</option>
+                {% for period in periods %}
+                <option value="{{ period.pk }}" {% if selected_period == period.pk|stringformat:"s" %}selected{% endif %}>
+                    {{ period.get_month_display }} {{ period.year }} ({{ period.get_status_display }})
+                </option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-primary btn-sm" id="applyAuditFilterBtn"><i class="fas fa-filter"></i> Filter</button>
+            {% if selected_period %}
+            <a href="{% url 'payroll:audit_log' %}" class="btn btn-outline btn-sm" id="clearAuditFilterBtn"><i class="fas fa-times"></i> Clear</a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="data-table" id="auditLogTable">
+            <thead>
+                <tr>
+                    <th>When</th>
+                    <th>Action</th>
+                    <th>Period</th>
+                    <th>By</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td>
+                        <span title="{{ log.timestamp|date:'d M Y H:i:s' }}">
+                            {{ log.timestamp|date:"d M Y" }}<br>
+                            <small class="text-muted">{{ log.timestamp|date:"H:i" }}</small>
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge badge-{% if log.action == 'generated' or log.action == 'regenerated' %}info{% elif log.action == 'modified' %}warning{% elif log.action == 'finalized' %}secondary{% elif log.action == 'paid' or log.action == 'batch_paid' %}success{% elif log.action == 'unpaid' %}danger{% else %}outline{% endif %}">
+                            {{ log.get_action_display }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if log.period %}{{ log.period.get_month_display }} {{ log.period.year }}{% else %}—{% endif %}
+                    </td>
+                    <td>
+                        {% if log.user %}{{ log.user.get_full_name|default:log.user.username }}{% else %}System{% endif %}
+                    </td>
+                    <td>
+                        {% if log.details %}
+                        <details class="audit-details">
+                            <summary>View Details</summary>
+                            <div class="audit-json">
+                                {% for key, value in log.details.items %}
+                                <div><strong>{{ key }}:</strong>
+                                    {% if value|length > 100 %}
+                                    <pre style="margin: 0.25rem 0; font-size: 0.75rem;">{{ value }}</pre>
+                                    {% else %}
+                                    {{ value }}
+                                    {% endif %}
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </details>
+                        {% else %}—{% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="text-center text-muted">No audit log entries found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .audit-details summary {
+        cursor: pointer;
+        color: var(--primary);
+        font-size: 0.85rem;
+    }
+    .audit-json {
+        margin-top: 0.5rem;
+        padding: 0.75rem;
+        background: var(--card-bg);
+        border-radius: 0.5rem;
+        font-size: 0.8rem;
+        border: 1px solid var(--border);
+    }
+    .audit-json div {
+        margin-bottom: 0.25rem;
+    }
+</style>
+{% endblock %}

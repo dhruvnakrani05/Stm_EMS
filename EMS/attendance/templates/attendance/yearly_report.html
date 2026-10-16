@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Yearly Attendance Report{% endblock %}
+{% block page_title %}Yearly Attendance Report{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <div class="date-nav">
+        <a href="?year={{ year|add:'-1' }}" class="btn btn-outline btn-sm"><i class="fas fa-chevron-left"></i></a>
+        <h3>{{ year }}</h3>
+        <a href="?year={{ year|add:'1' }}" class="btn btn-outline btn-sm"><i class="fas fa-chevron-right"></i></a>
+    </div>
+</div>
+
+<!-- Monthly Overview Chart -->
+<div class="card chart-card">
+    <div class="card-header"><h3><i class="fas fa-chart-bar"></i> Monthly Attendance Overview</h3></div>
+    <div class="card-body"><canvas id="yearlyAttChart" height="300"></canvas></div>
+</div>
+
+<!-- Monthly Summary -->
+<div class="card" style="margin-top: 1rem;">
+    <div class="card-header"><h3>Monthly Summary</h3></div>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead><tr><th>Month</th><th class="text-center">Present</th><th class="text-center">Absent</th><th class="text-center">Half Day</th><th class="text-center">Casual Leave</th></tr></thead>
+            <tbody>
+                {% for ms in monthly_summary %}
+                <tr>
+                    <td><a href="{% url 'attendance:monthly' %}?month={{ ms.month_num }}&year={{ year }}">{{ ms.month }}</a></td>
+                    <td class="text-center text-success">{{ ms.present }}</td>
+                    <td class="text-center text-danger">{{ ms.absent }}</td>
+                    <td class="text-center text-warning">{{ ms.half_day }}</td>
+                    <td class="text-center text-info">{{ ms.casual }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Employee Yearly Summary -->
+<div class="card" style="margin-top: 1rem;">
+    <div class="card-header"><h3>Employee-wise Summary</h3></div>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead><tr><th>Emp ID</th><th>Name</th><th class="text-center">Present</th><th class="text-center">Absent</th><th class="text-center">Half Day</th><th class="text-center">Casual Leave</th></tr></thead>
+            <tbody>
+                {% for ed in employee_yearly %}
+                <tr>
+                    <td><strong>{{ ed.employee.employee_id }}</strong></td>
+                    <td><a href="{% url 'attendance:employee' ed.employee.pk %}?view=yearly&year={{ year }}">{{ ed.employee.full_name }}</a></td>
+                    <td class="text-center text-success">{{ ed.present }}</td>
+                    <td class="text-center text-danger">{{ ed.absent }}</td>
+                    <td class="text-center text-warning">{{ ed.half_day }}</td>
+                    <td class="text-center text-info">{{ ed.casual }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('yearlyAttChart');
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: [{% for ms in monthly_summary %}'{{ ms.month }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+                datasets: [{
+                    label: 'Present', data: [{% for ms in monthly_summary %}{{ ms.present }}{% if not forloop.last %},{% endif %}{% endfor %}],
+                    backgroundColor: 'rgba(16,185,129,0.7)', borderRadius: 4
+                },{
+                    label: 'Absent', data: [{% for ms in monthly_summary %}{{ ms.absent }}{% if not forloop.last %},{% endif %}{% endfor %}],
+                    backgroundColor: 'rgba(239,68,68,0.7)', borderRadius: 4
+                },{
+                    label: 'Half Day', data: [{% for ms in monthly_summary %}{{ ms.half_day }}{% if not forloop.last %},{% endif %}{% endfor %}],
+                    backgroundColor: 'rgba(245,158,11,0.7)', borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { labels: { color: '#94a3b8' } } },
+                scales: {
+                    y: { beginAtZero: true, stacked: true, grid: { color: 'rgba(148,163,184,0.1)' }, ticks: { color: '#94a3b8' } },
+                    x: { stacked: true, grid: { display: false }, ticks: { color: '#94a3b8' } }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

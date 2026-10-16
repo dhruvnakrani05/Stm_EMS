@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}{{ employee.full_name }}{% endblock %}
+{% block page_title %}Employee Profile{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <a href="{% url 'employees:list' %}" class="btn btn-outline">
+        <i class="fas fa-arrow-left"></i> Back to Employees
+    </a>
+    {% if request.user.is_admin_user %}
+    <div class="action-buttons">
+        <a href="{% url 'employees:edit' employee.pk %}" class="btn btn-primary">
+            <i class="fas fa-edit"></i> Edit
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Profile Card -->
+<div class="profile-card">
+    <div class="profile-header">
+        {% if employee.profile_photo %}
+        <img src="{{ employee.profile_photo.url }}" alt="{{ employee.full_name }}" class="profile-photo">
+        {% else %}
+        <div class="profile-avatar-large">{{ employee.name.0 }}{{ employee.surname.0 }}</div>
+        {% endif %}
+        <div class="profile-info">
+            <h2>{{ employee.full_name }}</h2>
+            <span class="profile-id">{{ employee.employee_id }}</span>
+            <span class="badge badge-{% if employee.is_active %}success{% else %}danger{% endif %}">
+                {{ employee.is_active|yesno:"Active,Inactive" }}
+            </span>
+        </div>
+    </div>
+    <div class="profile-details-grid">
+        <div class="profile-detail">
+            <span class="detail-label"><i class="fas fa-map-marker-alt"></i> City</span>
+            <span class="detail-value">{{ employee.city }}</span>
+        </div>
+        <div class="profile-detail">
+            <span class="detail-label"><i class="fas fa-phone"></i> Mobile</span>
+            <span class="detail-value">{{ employee.mobile_number }}</span>
+        </div>
+        <div class="profile-detail">
+            <span class="detail-label"><i class="fas fa-envelope"></i> Email</span>
+            <span class="detail-value">{{ employee.email|default:"—" }}</span>
+        </div>
+        <div class="profile-detail">
+            <span class="detail-label"><i class="fas fa-calendar"></i> Date of Joining</span>
+            <span class="detail-value">{{ employee.date_of_joining|date:"d M Y" }}</span>
+        </div>
+        <div class="profile-detail">
+            <span class="detail-label"><i class="fas fa-rupee-sign"></i> Basic Salary</span>
+            <span class="detail-value salary-highlight">₹{{ employee.basic_salary|floatformat:0 }}</span>
+        </div>
+    </div>
+</div>
+
+<!-- Current Month Attendance Summary -->
+<div class="section-title">
+    <h3><i class="fas fa-calendar-check"></i> {{ current_month }} Attendance</h3>
+    <a href="{% url 'attendance:employee' employee.pk %}" class="btn btn-sm btn-outline">View Full Attendance</a>
+</div>
+<div class="mini-stats">
+    <div class="mini-stat present">
+        <span class="mini-value">{{ present_count }}</span>
+        <span class="mini-label">Present</span>
+    </div>
+    <div class="mini-stat absent">
+        <span class="mini-value">{{ absent_count }}</span>
+        <span class="mini-label">Absent</span>
+    </div>
+    <div class="mini-stat halfday">
+        <span class="mini-value">{{ halfday_count }}</span>
+        <span class="mini-label">Half Day</span>
+    </div>
+    <div class="mini-stat casual">
+        <span class="mini-value">{{ casual_count }}</span>
+        <span class="mini-label">Casual Leave</span>
+    </div>
+</div>
+
+<!-- Quick Links -->
+<div class="profile-links">
+    <a href="{% url 'attendance:employee' employee.pk %}" class="profile-link-card">
+        <i class="fas fa-calendar-alt"></i>
+        <span>Attendance History</span>
+    </a>
+    <a href="{% url 'payroll:employee_history' employee.pk %}" class="profile-link-card">
+        <i class="fas fa-money-bill-wave"></i>
+        <span>Payroll History</span>
+    </a>
+    <a href="{% url 'reports:index' %}?employee={{ employee.pk }}" class="profile-link-card">
+        <i class="fas fa-file-pdf"></i>
+        <span>Generate Report</span>
+    </a>
+</div>
+
+<!-- Recent Payroll -->
+{% if recent_payroll %}
+<div class="section-title">
+    <h3><i class="fas fa-money-bill"></i> Recent Payroll</h3>
+    <a href="{% url 'payroll:employee_history' employee.pk %}" class="btn btn-sm btn-outline">View All</a>
+</div>
+<div class="card">
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr><th>Month</th><th>Base Salary</th><th>Deductions</th><th>Net Salary</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+                {% for pr in recent_payroll %}
+                <tr>
+                    <td><a href="{% url 'payroll:detail' pr.pk %}">{{ pr.get_month_display }} {{ pr.year }}</a></td>
+                    <td>₹{{ pr.base_salary|floatformat:0 }}</td>
+                    <td class="text-danger">-₹{{ pr.attendance_deduction|floatformat:0 }}</td>
+                    <td><strong>₹{{ pr.net_salary|floatformat:0 }}</strong></td>
+                    <td>
+                        <span class="badge badge-{% if pr.is_paid %}success{% else %}warning{% endif %}">
+                            {% if pr.is_paid %}Paid{% else %}Unpaid{% endif %}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Recent Advances -->
+{% if recent_advances %}
+<div class="section-title">
+    <h3><i class="fas fa-hand-holding-usd"></i> Recent Advances</h3>
+</div>
+<div class="card">
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr><th>Date</th><th>Amount</th><th>Reason</th></tr>
+            </thead>
+            <tbody>
+                {% for adv in recent_advances %}
+                <tr>
+                    <td>{{ adv.date|date:"d M Y" }}</td>
+                    <td class="text-warning">₹{{ adv.amount|floatformat:0 }}</td>
+                    <td>{{ adv.reason|default:"—" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

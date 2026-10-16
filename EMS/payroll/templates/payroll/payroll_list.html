@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}Payroll Records{% endblock %}
+{% block page_title %}Payroll Records{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <div class="header-stats">
+        <span class="header-stat"><i class="fas fa-rupee-sign"></i> Total: ₹{{ total_salary|floatformat:0 }}</span>
+        <span class="header-stat text-success"><i class="fas fa-check"></i> Paid: ₹{{ total_paid|floatformat:0 }}</span>
+        <span class="header-stat text-warning"><i class="fas fa-clock"></i> Unpaid: ₹{{ total_unpaid|floatformat:0 }}</span>
+    </div>
+    <div class="action-buttons">
+        {% if request.user.is_admin_user %}
+        <a href="{% url 'payroll:generate' %}" class="btn btn-primary" id="generatePayrollBtn">
+            <i class="fas fa-calculator"></i> Generate Payroll
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card filter-card">
+    <form method="get" class="filter-form" id="payrollFilterForm">
+        <div class="filter-row">
+            {{ form.month }}
+            {{ form.year }}
+            {{ form.employee }}
+            {{ form.status }}
+            <button type="submit" class="btn btn-primary btn-sm" id="applyFilterBtn"><i class="fas fa-filter"></i> Filter</button>
+            {% if request.GET %}
+            <a href="{% url 'payroll:list' %}" class="btn btn-outline btn-sm" id="clearFilterBtn"><i class="fas fa-times"></i> Clear</a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<!-- Period Actions (if viewing a specific month/year) -->
+{% if request.user.is_admin_user and periods %}
+<div class="card" style="margin-bottom: 1rem;">
+    <div class="card-header">
+        <h3><i class="fas fa-calendar-check"></i> Payroll Periods</h3>
+    </div>
+    <div class="table-responsive">
+        <table class="data-table" id="periodsTable">
+            <thead>
+                <tr><th>Period</th><th>Status</th><th>Working Days</th><th>Records</th><th>Total</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+                {% for period in periods %}
+                <tr>
+                    <td><strong>{{ period.get_month_display }} {{ period.year }}</strong></td>
+                    <td>
+                        <span class="badge badge-{% if period.status == 'draft' %}info{% elif period.status == 'finalized' %}warning{% else %}success{% endif %}">
+                            {{ period.get_status_display }}
+                        </span>
+                    </td>
+                    <td>{{ period.total_working_days }}</td>
+                    <td>{{ period.record_count }}</td>
+                    <td>₹{{ period.total_net_salary|floatformat:0 }}</td>
+                    <td>
+                        <div class="action-buttons">
+                            {% if period.is_draft %}
+                            <a href="{% url 'payroll:finalize' period.pk %}" class="btn btn-sm btn-warning" title="Finalize" id="finalizeBtn-{{ period.pk }}"><i class="fas fa-lock"></i></a>
+                            {% endif %}
+                            {% if not period.is_paid %}
+                            <form method="post" action="{% url 'payroll:mark_period_paid' period.pk %}" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-success" title="Mark All Paid" onclick="return confirm('Mark all records in this period as paid?')" id="batchPayBtn-{{ period.pk }}"><i class="fas fa-check-double"></i></button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="data-table" id="payrollTable">
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Period</th>
+                    <th>Base Salary</th>
+                    <th>Deductions</th>
+                    <th>Payable Salary</th>
+                    <th>Advances</th>
+                    <th>Net Salary</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in records %}
+                <tr>
+                    <td>
+                        <a href="{% url 'employees:detail' record.employee.pk %}">
+                            <strong>{{ record.employee.employee_id }}</strong> - {{ record.employee.full_name }}
+                        </a>
+                    </td>
+                    <td>{{ record.get_month_display }} {{ record.year }}</td>
+                    <td>₹{{ record.base_salary|floatformat:0 }}</td>
+                    <td class="text-danger">-₹{{ record.attendance_deduction|floatformat:0 }}</td>
+                    <td><strong>₹{{ record.payable_salary|floatformat:0 }}</strong></td>
+                    <td class="text-warning">-₹{{ record.total_advances|floatformat:0 }}</td>
+                    <td><strong>₹{{ record.net_salary|floatformat:0 }}</strong></td>
+                    <td>
+                        <span class="badge badge-{% if record.is_paid %}success{% else %}warning{% endif %}">
+                            {% if record.is_paid %}Paid{% else %}Unpaid{% endif %}
+                        </span>
+                        {% if record.salary_modified %}
+                        <span class="badge badge-info" title="{{ record.modification_note }}">Modified</span>
+                        {% endif %}
+                        {% if record.period.is_finalized %}
+                        <span class="badge badge-outline" title="Period finalized"><i class="fas fa-lock"></i></span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <a href="{% url 'payroll:detail' record.pk %}" class="btn btn-sm btn-outline" title="View Details" id="viewBtn-{{ record.pk }}"><i class="fas fa-eye"></i></a>
+                            {% if request.user.is_admin_user and record.period.can_modify %}
+                            <a href="{% url 'payroll:modify' record.pk %}" class="btn btn-sm btn-outline" title="Modify" id="modifyBtn-{{ record.pk }}"><i class="fas fa-edit"></i></a>
+                            {% if not record.is_paid %}
+                            <form method="post" action="{% url 'payroll:mark_paid' record.pk %}" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-success" title="Mark Paid" id="payBtn-{{ record.pk }}"><i class="fas fa-check"></i></button>
+                            </form>
+                            {% endif %}
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="9" class="text-center text-muted">No payroll records found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

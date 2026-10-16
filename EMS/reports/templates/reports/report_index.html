@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}Reports & Export{% endblock %}
+{% block page_title %}Reports & Export{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <p class="text-muted">Generate and download reports, share via WhatsApp or SMS</p>
+</div>
+
+<div class="reports-grid">
+    <!-- Attendance Reports -->
+    <div class="card report-card">
+        <div class="card-header">
+            <h3><i class="fas fa-calendar-check"></i> Attendance Reports</h3>
+        </div>
+        <div class="card-body">
+            <form id="attendanceReportForm">
+                <div class="form-group">
+                    <label>Report Type</label>
+                    <select class="form-select" id="attReportType" onchange="toggleEmployeeSelect('att')">
+                        <option value="overall">Overall (All Employees)</option>
+                        <option value="individual">Individual Employee</option>
+                    </select>
+                </div>
+                <div class="form-group" id="attEmployeeGroup" style="display:none;">
+                    <label>Employee</label>
+                    <select class="form-select" id="attEmployee">
+                        {% for emp in employees %}
+                        <option value="{{ emp.pk }}">{{ emp.employee_id }} - {{ emp.full_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Month</label>
+                        <select class="form-select" id="attMonth">
+                            {% for i in "123456789" %}
+                            <option value="{{ forloop.counter }}" {% if forloop.counter == current_month %}selected{% endif %}>{{ forloop.counter }}</option>
+                            {% endfor %}
+                            <option value="10" {% if current_month == 10 %}selected{% endif %}>10</option>
+                            <option value="11" {% if current_month == 11 %}selected{% endif %}>11</option>
+                            <option value="12" {% if current_month == 12 %}selected{% endif %}>12</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Year</label>
+                        <input type="number" class="form-input" id="attYear" value="{{ current_year }}">
+                    </div>
+                </div>
+                <div class="report-actions">
+                    <button type="button" class="btn btn-primary" onclick="downloadReport('attendance')">
+                        <i class="fas fa-download"></i> Download PDF
+                    </button>
+                    <button type="button" class="btn btn-success" onclick="shareReport('attendance', 'whatsapp')">
+                        <i class="fab fa-whatsapp"></i> WhatsApp
+                    </button>
+                    <button type="button" class="btn btn-outline" onclick="shareReport('attendance', 'sms')">
+                        <i class="fas fa-sms"></i> SMS
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Payroll Reports -->
+    <div class="card report-card">
+        <div class="card-header">
+            <h3><i class="fas fa-money-bill-wave"></i> Payroll Reports</h3>
+        </div>
+        <div class="card-body">
+            <form id="payrollReportForm">
+                <div class="form-group">
+                    <label>Report Type</label>
+                    <select class="form-select" id="payReportType" onchange="toggleEmployeeSelect('pay')">
+                        <option value="overall">Overall (All Employees)</option>
+                        <option value="individual">Individual Employee</option>
+                    </select>
+                </div>
+                <div class="form-group" id="payEmployeeGroup" style="display:none;">
+                    <label>Employee</label>
+                    <select class="form-select" id="payEmployee">
+                        {% for emp in employees %}
+                        <option value="{{ emp.pk }}">{{ emp.employee_id }} - {{ emp.full_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Month</label>
+                        <select class="form-select" id="payMonth">
+                            {% for i in "123456789" %}
+                            <option value="{{ forloop.counter }}" {% if forloop.counter == current_month %}selected{% endif %}>{{ forloop.counter }}</option>
+                            {% endfor %}
+                            <option value="10" {% if current_month == 10 %}selected{% endif %}>10</option>
+                            <option value="11" {% if current_month == 11 %}selected{% endif %}>11</option>
+                            <option value="12" {% if current_month == 12 %}selected{% endif %}>12</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Year</label>
+                        <input type="number" class="form-input" id="payYear" value="{{ current_year }}">
+                    </div>
+                </div>
+                <div class="report-actions">
+                    <button type="button" class="btn btn-primary" onclick="downloadReport('payroll')">
+                        <i class="fas fa-download"></i> Download PDF
+                    </button>
+                    <button type="button" class="btn btn-success" onclick="shareReport('payroll', 'whatsapp')">
+                        <i class="fab fa-whatsapp"></i> WhatsApp
+                    </button>
+                    <button type="button" class="btn btn-outline" onclick="shareReport('payroll', 'sms')">
+                        <i class="fas fa-sms"></i> SMS
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleEmployeeSelect(prefix) {
+    const type = document.getElementById(prefix + 'ReportType').value;
+    const group = document.getElementById(prefix + 'EmployeeGroup');
+    group.style.display = type === 'individual' ? 'block' : 'none';
+}
+
+function downloadReport(report) {
+    const prefix = report === 'attendance' ? 'att' : 'pay';
+    const type = document.getElementById(prefix + 'ReportType').value;
+    const month = document.getElementById(prefix + 'Month').value;
+    const year = document.getElementById(prefix + 'Year').value;
+    let url = `/reports/${report}/download/?type=${type}&month=${month}&year=${year}`;
+    if (type === 'individual') {
+        const employee = document.getElementById(prefix + 'Employee').value;
+        url += `&employee=${employee}`;
+    }
+    window.open(url, '_blank');
+}
+
+function shareReport(report, via) {
+    const prefix = report === 'attendance' ? 'att' : 'pay';
+    const type = document.getElementById(prefix + 'ReportType').value;
+    const month = document.getElementById(prefix + 'Month').value;
+    const year = document.getElementById(prefix + 'Year').value;
+    let url = `/reports/share/?report=${report}&via=${via}&month=${month}&year=${year}`;
+    if (type === 'individual') {
+        const employee = document.getElementById(prefix + 'Employee').value;
+        url += `&employee=${employee}`;
+    }
+    window.open(url, '_blank');
+}
+</script>
+{% endblock %}

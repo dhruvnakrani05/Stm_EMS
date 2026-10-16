@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Daily Attendance{% endblock %}
+{% block page_title %}Daily Attendance{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <div>
+        <p class="text-muted">{{ view_date|date:"l, d F Y" }}</p>
+    </div>
+    <div class="action-buttons">
+        <form method="get" class="inline-form" action="{% url 'attendance:daily_today' %}">
+            <input type="date" name="date" value="{{ view_date|date:'Y-m-d' }}" class="form-input" onchange="this.form.submit()" id="dailyDatePicker">
+        </form>
+        {% if request.user.can_modify_attendance %}
+        <a href="{% url 'attendance:mark' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Mark Attendance
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+{% if is_thursday %}
+<div class="alert alert-info"><i class="fas fa-info-circle"></i> This date is a Thursday (Weekly Off).</div>
+{% endif %}
+{% if holiday %}
+<div class="alert alert-info"><i class="fas fa-umbrella-beach"></i> Holiday: <strong>{{ holiday.name }}</strong></div>
+{% endif %}
+
+<!-- Stats -->
+<div class="mini-stats">
+    <div class="mini-stat present"><span class="mini-value">{{ present }}</span><span class="mini-label">Present</span></div>
+    <div class="mini-stat absent"><span class="mini-value">{{ absent }}</span><span class="mini-label">Absent</span></div>
+    <div class="mini-stat halfday"><span class="mini-value">{{ half_day }}</span><span class="mini-label">Half Day</span></div>
+    <div class="mini-stat casual"><span class="mini-value">{{ casual }}</span><span class="mini-label">Casual Leave</span></div>
+    <div class="mini-stat"><span class="mini-value">{{ unmarked }}</span><span class="mini-label">Unmarked</span></div>
+</div>
+
+<!-- Attendance Table -->
+<div class="card">
+    <div class="table-responsive">
+        <table class="data-table" id="dailyAttendanceTable">
+            <thead>
+                <tr>
+                    <th>Emp ID</th>
+                    <th>Employee</th>
+                    <th>Status</th>
+                    <th>Notes</th>
+                    {% if request.user.can_modify_attendance %}<th>Action</th>{% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for emp in employees %}
+                {% with att=attendance_map|default_if_none:"" %}
+                <tr class="{% if emp.id in attendance_map %}row-{{ attendance_map|dictsort:'id' }}{% endif %}">
+                    <td><strong>{{ emp.employee_id }}</strong></td>
+                    <td>
+                        <a href="{% url 'employees:detail' emp.pk %}" class="emp-cell">
+                            <div class="emp-avatar-sm">{{ emp.name.0 }}{{ emp.surname.0 }}</div>
+                            <span>{{ emp.full_name }}</span>
+                        </a>
+                    </td>
+                    <td>
+                        {% for record in records %}
+                            {% if record.employee_id == emp.id %}
+                            <span class="status-badge {{ record.status_color }}">{{ record.get_status_display }}</span>
+                            {% endif %}
+                        {% endfor %}
+                        {% if emp.id not in attendance_map %}
+                        <span class="status-badge status-unmarked">Not Marked</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% for record in records %}
+                            {% if record.employee_id == emp.id %}{{ record.notes|default:"—" }}{% endif %}
+                        {% endfor %}
+                    </td>
+                    {% if request.user.can_modify_attendance %}
+                    <td>
+                        {% for record in records %}
+                            {% if record.employee_id == emp.id %}
+                            <a href="{% url 'attendance:edit' record.pk %}" class="btn btn-sm btn-outline" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            {% endif %}
+                        {% endfor %}
+                    </td>
+                    {% endif %}
+                </tr>
+                {% endwith %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

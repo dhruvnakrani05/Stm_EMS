@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Salary Advances{% endblock %}
+{% block page_title %}Salary Advances{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <p class="text-muted">Track employee salary advances (borrowed money)</p>
+    {% if request.user.can_modify_attendance %}
+    <a href="{% url 'payroll:add_advance' %}" class="btn btn-primary" id="addAdvanceBtn"><i class="fas fa-plus"></i> Record Advance</a>
+    {% endif %}
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="data-table" id="advancesTable">
+            <thead>
+                <tr><th>Date</th><th>Employee</th><th>Amount</th><th>Status</th><th>Reason</th><th>Added By</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+                {% for adv in advances %}
+                <tr>
+                    <td>{{ adv.date|date:"d M Y" }}</td>
+                    <td><a href="{% url 'employees:detail' adv.employee.pk %}">{{ adv.employee.employee_id }} - {{ adv.employee.full_name }}</a></td>
+                    <td class="text-warning"><strong>₹{{ adv.amount|floatformat:0 }}</strong></td>
+                    <td>
+                        <span class="badge badge-{% if adv.status == 'pending' %}warning{% elif adv.status == 'deducted' %}success{% else %}danger{% endif %}">
+                            {{ adv.get_status_display }}
+                        </span>
+                    </td>
+                    <td>{{ adv.reason|default:"—" }}</td>
+                    <td>{{ adv.added_by|default:"—" }}</td>
+                    <td>
+                        <div class="action-buttons">
+                            {% if adv.status == 'pending' %}
+                                {% if request.user.can_modify_attendance %}
+                                <a href="{% url 'payroll:edit_advance' adv.pk %}" class="btn btn-sm btn-outline" title="Edit" id="editAdvBtn-{{ adv.pk }}"><i class="fas fa-edit"></i></a>
+                                {% endif %}
+                                {% if request.user.is_admin_user %}
+                                <form method="post" action="{% url 'payroll:delete_advance' adv.pk %}" style="display:inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this advance?')" id="deleteAdvBtn-{{ adv.pk }}"><i class="fas fa-trash"></i></button>
+                                </form>
+                                {% endif %}
+                            {% elif adv.status == 'deducted' %}
+                                <span class="text-muted" title="Deducted in payroll — cannot edit"><i class="fas fa-lock"></i></span>
+                            {% else %}
+                                <span class="text-muted" title="Cancelled"><i class="fas fa-ban"></i></span>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center text-muted">No salary advances recorded.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

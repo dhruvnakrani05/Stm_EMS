@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Stat Cards -->
+<div class="stats-grid">
+    <div class="stat-card stat-employees">
+        <div class="stat-icon"><i class="fas fa-users"></i></div>
+        <div class="stat-info">
+            <span class="stat-value" data-count="{{ total_employees }}">{{ total_employees }}</span>
+            <span class="stat-label">Total Employees</span>
+        </div>
+    </div>
+    <div class="stat-card stat-present">
+        <div class="stat-icon"><i class="fas fa-user-check"></i></div>
+        <div class="stat-info">
+            <span class="stat-value" data-count="{{ present_today }}">{{ present_today }}</span>
+            <span class="stat-label">Present Today</span>
+        </div>
+        <div class="stat-badge">{{ attendance_percentage }}%</div>
+    </div>
+    <div class="stat-card stat-absent">
+        <div class="stat-icon"><i class="fas fa-user-times"></i></div>
+        <div class="stat-info">
+            <span class="stat-value" data-count="{{ absent_today }}">{{ absent_today }}</span>
+            <span class="stat-label">Absent Today</span>
+        </div>
+    </div>
+    <div class="stat-card stat-salary">
+        <div class="stat-icon"><i class="fas fa-rupee-sign"></i></div>
+        <div class="stat-info">
+            <span class="stat-value">₹{{ total_salary_current|floatformat:0 }}</span>
+            <span class="stat-label">Total Salary (This Month)</span>
+        </div>
+        <div class="stat-sub">
+            <!-- <span class="text-success">Paid: ₹{{ paid_salary_current|floatformat:0 }}</span> -->
+        </div>
+    </div>
+</div>
+
+<!-- Quick Stats Row -->
+<div class="quick-stats">
+    <div class="quick-stat">
+        <span class="quick-value">{{ halfday_today }}</span>
+        <span class="quick-label">Half Day</span>
+    </div>
+    <div class="quick-stat">
+        <span class="quick-value">{{ casual_today }}</span>
+        <span class="quick-label">Casual Leave</span>
+    </div>
+    <div class="quick-stat">
+        <span class="quick-value">{{ unmarked_today }}</span>
+        <span class="quick-label">Unmarked</span>
+    </div>
+    <div class="quick-stat">
+        <span class="quick-value">₹{{ unpaid_salary_current|floatformat:0 }}</span>
+        <span class="quick-label">Unpaid Salary</span>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="charts-grid">
+    <div class="card chart-card">
+        <div class="card-header">
+            <h3><i class="fas fa-chart-line"></i> Attendance Trend (Last 7 Days)</h3>
+        </div>
+        <div class="card-body">
+            <canvas id="attendanceChart" height="250"></canvas>
+        </div>
+    </div>
+    <div class="card chart-card">
+        <div class="card-header">
+            <h3><i class="fas fa-chart-bar"></i> Salary Trend (Last 6 Months)</h3>
+        </div>
+        <div class="card-body">
+            <canvas id="salaryChart" height="250"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="activity-grid">
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-user-plus"></i> Recent Employees</h3>
+            <a href="{% url 'employees:list' %}" class="btn btn-sm btn-outline">View All</a>
+        </div>
+        <div class="card-body">
+            <div class="activity-list">
+                {% for emp in recent_employees %}
+                <a href="{% url 'employees:detail' emp.pk %}" class="activity-item">
+                    <div class="activity-avatar">{{ emp.name.0 }}{{ emp.surname.0 }}</div>
+                    <div class="activity-details">
+                        <span class="activity-name">{{ emp.full_name }}</span>
+                        <span class="activity-sub">{{ emp.employee_id }} · {{ emp.city }}</span>
+                    </div>
+                    <span class="activity-meta">₹{{ emp.basic_salary|floatformat:0 }}</span>
+                </a>
+                {% empty %}
+                <p class="text-muted text-center">No employees yet</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-money-bill"></i> Recent Payroll</h3>
+            <a href="{% url 'payroll:list' %}" class="btn btn-sm btn-outline">View All</a>
+        </div>
+        <div class="card-body">
+            <div class="activity-list">
+                {% for pr in recent_payroll %}
+                <a href="{% url 'payroll:detail' pr.pk %}" class="activity-item">
+                    <div class="activity-avatar {% if pr.is_paid %}avatar-success{% else %}avatar-warning{% endif %}">
+                        {% if pr.is_paid %}<i class="fas fa-check"></i>{% else %}<i class="fas fa-clock"></i>{% endif %}
+                    </div>
+                    <div class="activity-details">
+                        <span class="activity-name">{{ pr.employee.full_name }}</span>
+                        <span class="activity-sub">{{ pr.get_month_display }} {{ pr.year }}</span>
+                    </div>
+                    <span class="activity-meta">₹{{ pr.net_salary|floatformat:0 }}</span>
+                </a>
+                {% empty %}
+                <p class="text-muted text-center">No payroll records yet</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Attendance Trend Chart
+        const attCtx = document.getElementById('attendanceChart');
+        if (attCtx) {
+            new Chart(attCtx, {
+                type: 'line',
+                data: {
+                    labels: [{% for item in attendance_trend %}'{{ item.date }}'{% if not forloop.last %}, {% endif %} {% endfor %}],
+        datasets: [{
+            label: 'Present',
+            data: [{% for item in attendance_trend %}{{ item.present }}{% if not forloop.last %}, {% endif %} {% endfor %}],
+    borderColor: '#10b981',
+        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            tension: 0.4,
+                fill: true,
+                }, {
+        label: 'Absent',
+            data: [{% for item in attendance_trend %} { { item.absent } } {% if not forloop.last %}, {% endif %} {% endfor %}],
+    borderColor: '#ef4444',
+        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+            tension: 0.4,
+                fill: true,
+                }, {
+        label: 'Half Day',
+            data: [{% for item in attendance_trend %} { { item.half_day } } {% if not forloop.last %}, {% endif %} {% endfor %}],
+    borderColor: '#f59e0b',
+        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+            tension: 0.4,
+                fill: true,
+                }]
+            },
+    options: {
+        responsive: true,
+            maintainAspectRatio: false,
+                plugins: { legend: { labels: { color: '#94a3b8' } } },
+        scales: {
+            y: { beginAtZero: true, grid: { color: 'rgba(148,163,184,0.1)' }, ticks: { color: '#94a3b8' } },
+            x: { grid: { color: 'rgba(148,163,184,0.05)' }, ticks: { color: '#94a3b8' } }
+        }
+    }
+        });
+    }
+
+    // Salary Trend Chart
+    const salCtx = document.getElementById('salaryChart');
+    if (salCtx) {
+        new Chart(salCtx, {
+            type: 'bar',
+            data: {
+                labels: [{% for item in salary_trend %}'{{ item.month }}'{% if not forloop.last %}, {% endif %} {% endfor %}],
+    datasets: [{
+        label: 'Total Salary',
+        data: [{% for item in salary_trend %}{{ item.total }}{% if not forloop.last %}, {% endif %} {% endfor %}],
+    backgroundColor: 'rgba(124, 58, 237, 0.6)',
+        borderColor: '#7c3aed',
+            borderWidth: 1,
+                borderRadius: 8,
+                }, {
+        label: 'Paid',
+            data: [{% for item in salary_trend %} { { item.paid } } {% if not forloop.last %}, {% endif %} {% endfor %}],
+    backgroundColor: 'rgba(16, 185, 129, 0.6)',
+        borderColor: '#10b981',
+            borderWidth: 1,
+                borderRadius: 8,
+                }]
+            },
+    options: {
+        responsive: true,
+            maintainAspectRatio: false,
+                plugins: { legend: { labels: { color: '#94a3b8' } } },
+        scales: {
+            y: { beginAtZero: true, grid: { color: 'rgba(148,163,184,0.1)' }, ticks: { color: '#94a3b8' } },
+            x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+        }
+    }
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block title %}Payslip - {{ record.employee.full_name }}{% endblock %}
+{% block page_title %}Payroll Detail{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <a href="{% url 'payroll:list' %}" class="btn btn-outline" id="backToListBtn"><i class="fas fa-arrow-left"></i> Back</a>
+    <div class="action-buttons">
+        <a href="{% url 'reports:download_payroll' %}?employee={{ record.employee.pk }}&month={{ record.period.month }}&year={{ record.period.year }}" class="btn btn-outline" id="downloadPdfBtn"><i class="fas fa-download"></i> Download PDF</a>
+        <a href="{% url 'reports:share' %}?employee={{ record.employee.pk }}&month={{ record.period.month }}&year={{ record.period.year }}&report=payroll&via=whatsapp" class="btn btn-success" target="_blank" id="shareWhatsappBtn"><i class="fab fa-whatsapp"></i> Share</a>
+    </div>
+</div>
+
+<div class="payslip-card">
+    <div class="payslip-header">
+        <h2><i class="fas fa-file-invoice-dollar"></i> Payslip</h2>
+        <div class="payslip-period">
+            {{ record.get_month_display }} {{ record.year }}
+            {% if record.period.is_finalized or record.period.is_paid %}
+            <span class="badge badge-{% if record.period.is_paid %}success{% else %}warning{% endif %} badge-sm" style="margin-left: 0.5rem;">
+                <i class="fas fa-lock"></i> {{ record.period.get_status_display }}
+            </span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="payslip-employee">
+        <div class="payslip-detail"><span class="label">Employee</span><span class="value">{{ record.employee.full_name }}</span></div>
+        <div class="payslip-detail"><span class="label">Employee ID</span><span class="value">{{ record.employee.employee_id }}</span></div>
+        <div class="payslip-detail"><span class="label">City</span><span class="value">{{ record.employee.city }}</span></div>
+    </div>
+
+    <div class="payslip-section">
+        <h3>Attendance Summary</h3>
+        <div class="payslip-grid">
+            <div class="payslip-item"><span>Working Days</span><span>{{ record.total_working_days }}</span></div>
+            <div class="payslip-item"><span>Present</span><span class="text-success">{{ record.days_present }}</span></div>
+            <div class="payslip-item"><span>Absent</span><span class="text-danger">{{ record.days_absent }}</span></div>
+            <div class="payslip-item"><span>Half Day</span><span class="text-warning">{{ record.half_days }}</span></div>
+            <div class="payslip-item"><span>Casual Leave</span><span class="text-info">{{ record.casual_leaves }}</span></div>
+            <div class="payslip-item"><span>Effective Days</span><span><strong>{{ record.effective_days_worked }}</strong></span></div>
+        </div>
+    </div>
+
+    <!-- Line-Item Breakdown -->
+    <div class="payslip-section">
+        <h3><i class="fas fa-list"></i> Salary Breakdown</h3>
+        <div class="payslip-calc">
+            <!-- Earnings -->
+            {% if earnings %}
+            <div class="calc-section-label"><i class="fas fa-plus-circle text-success"></i> Earnings</div>
+            {% for item in earnings %}
+            <div class="calc-row addition">
+                <span>{{ item.description }}</span>
+                <span>+₹{{ item.amount|floatformat:2 }}</span>
+            </div>
+            {% endfor %}
+            <div class="calc-row" style="border-top: 1px solid var(--border); font-weight: 600;">
+                <span>Gross Earnings</span>
+                <span>₹{{ record.gross_earnings|floatformat:2 }}</span>
+            </div>
+            {% endif %}
+
+            <!-- Deductions -->
+            {% if deductions %}
+            <div class="calc-section-label" style="margin-top: 1rem;"><i class="fas fa-minus-circle text-danger"></i> Deductions</div>
+            {% for item in deductions %}
+            <div class="calc-row deduction">
+                <span>{{ item.description }}</span>
+                <span>-₹{{ item.amount|floatformat:2 }}</span>
+            </div>
+            {% endfor %}
+            <div class="calc-row" style="border-top: 1px solid var(--border); font-weight: 600;">
+                <span>Total Deductions</span>
+                <span class="text-danger">-₹{{ record.total_deductions|floatformat:2 }}</span>
+            </div>
+            {% endif %}
+
+            <!-- Net Salary -->
+            <div class="calc-row total"><span>Net Salary</span><span>₹{{ record.net_salary|floatformat:2 }}</span></div>
+        </div>
+    </div>
+
+    <!-- Legacy Breakdown (fallback if no line items) -->
+    {% if not earnings and not deductions %}
+    <div class="payslip-section">
+        <h3>Salary Breakdown</h3>
+        <div class="payslip-calc">
+            <div class="calc-row"><span>Base Salary</span><span>₹{{ record.base_salary|floatformat:2 }}</span></div>
+            <div class="calc-row"><span>Daily Rate ({{ record.total_working_days }} days)</span><span>₹{{ record.daily_rate|floatformat:2 }}</span></div>
+            <div class="calc-row deduction"><span>Attendance Deduction ({{ record.days_absent }} absent + {{ record.half_days }} half days)</span><span>-₹{{ record.attendance_deduction|floatformat:2 }}</span></div>
+            <div class="calc-row" style="border-bottom: 2px solid var(--border); font-weight: 600;"><span>Payable Salary (as per attendance)</span><span>₹{{ record.payable_salary|floatformat:2 }}</span></div>
+            {% if record.total_advances > 0 %}
+            <div class="calc-row deduction"><span>Salary Advances Deducted</span><span>-₹{{ record.total_advances|floatformat:2 }}</span></div>
+            {% endif %}
+            {% if record.bonuses > 0 %}
+            <div class="calc-row addition"><span>Bonuses</span><span>+₹{{ record.bonuses|floatformat:2 }}</span></div>
+            {% endif %}
+            {% if record.other_deductions > 0 %}
+            <div class="calc-row deduction"><span>Other Deductions</span><span>-₹{{ record.other_deductions|floatformat:2 }}</span></div>
+            {% endif %}
+            <div class="calc-row total"><span>Net Salary</span><span>₹{{ record.net_salary|floatformat:2 }}</span></div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if advances %}
+    <div class="payslip-section">
+        <h3><i class="fas fa-hand-holding-usd"></i> Advance Details</h3>
+        <table class="data-table" id="advanceDetailsTable">
+            <thead><tr><th>Date</th><th>Amount</th><th>Status</th><th>Reason</th></tr></thead>
+            <tbody>
+                {% for adv in advances %}
+                <tr>
+                    <td>{{ adv.date|date:"d M Y" }}</td>
+                    <td>₹{{ adv.amount|floatformat:2 }}</td>
+                    <td>
+                        <span class="badge badge-{% if adv.status == 'pending' %}warning{% elif adv.status == 'deducted' %}success{% else %}danger{% endif %}">
+                            {{ adv.get_status_display }}
+                        </span>
+                    </td>
+                    <td>{{ adv.reason|default:"—" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    {% if record.salary_modified %}
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle"></i> Salary was modified{% if record.modified_by %} by {{ record.modified_by.get_full_name|default:record.modified_by.username }}{% endif %}.
+        {% if record.modification_note %}Note: {{ record.modification_note }}{% endif %}
+    </div>
+    {% endif %}
+
+    <div class="payslip-footer">
+        <span class="badge badge-{% if record.is_paid %}success{% else %}warning{% endif %} badge-lg">
+            {% if record.is_paid %}✅ PAID{% if record.paid_date %} on {{ record.paid_date|date:"d M Y" }}{% endif %}{% else %}⏳ UNPAID{% endif %}
+        </span>
+        {% if request.user.is_admin_user %}
+        <div class="action-buttons">
+            {% if record.period.can_modify %}
+            <a href="{% url 'payroll:modify' record.pk %}" class="btn btn-outline" id="modifySalaryBtn"><i class="fas fa-edit"></i> Modify</a>
+            {% endif %}
+            {% if record.is_paid %}
+            <form method="post" action="{% url 'payroll:mark_unpaid' record.pk %}" style="display:inline;">{% csrf_token %}<button class="btn btn-warning" id="markUnpaidBtn"><i class="fas fa-undo"></i> Mark Unpaid</button></form>
+            {% else %}
+            <form method="post" action="{% url 'payroll:mark_paid' record.pk %}" style="display:inline;">{% csrf_token %}<button class="btn btn-success" id="markPaidBtn"><i class="fas fa-check"></i> Mark Paid</button></form>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Audit Trail for this record -->
+{% if audit_logs %}
+<div class="card" style="margin-top: 1rem;">
+    <div class="card-header"><h3><i class="fas fa-history"></i> Audit Trail</h3></div>
+    <div class="table-responsive">
+        <table class="data-table" id="auditTrailTable">
+            <thead><tr><th>Action</th><th>By</th><th>When</th></tr></thead>
+            <tbody>
+                {% for log in audit_logs %}
+                <tr>
+                    <td>{{ log.get_action_display }}</td>
+                    <td>{{ log.user.get_full_name|default:log.user.username }}</td>
+                    <td>{{ log.timestamp|date:"d M Y H:i" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

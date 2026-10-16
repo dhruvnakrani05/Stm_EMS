@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Mark Attendance{% endblock %}
+{% block page_title %}Mark Attendance{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <p class="text-muted">Mark attendance for all employees</p>
+</div>
+
+{% if is_thursday %}
+<div class="alert alert-warning">
+    <i class="fas fa-info-circle"></i> Today is Thursday (Weekly Off). You can still mark attendance for other dates.
+</div>
+{% endif %}
+
+{% if holiday %}
+<div class="alert alert-info">
+    <i class="fas fa-umbrella-beach"></i> Today is a holiday: <strong>{{ holiday.name }}</strong>
+</div>
+{% endif %}
+
+<form method="post" id="bulkAttendanceForm">
+    {% csrf_token %}
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-calendar"></i> Select Date</h3>
+        </div>
+        <div class="card-body">
+            <div class="form-group" style="max-width: 300px;">
+                <input type="date" name="date" value="{{ today|date:'Y-m-d' }}" class="form-input" id="attendanceDate">
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-top: 1rem;">
+        <div class="card-header">
+            <h3><i class="fas fa-users"></i> Employees ({{ employees.count }})</h3>
+            <div class="bulk-actions">
+                <button type="button" class="btn btn-sm btn-success" onclick="setAllStatus('present')" id="allPresentBtn">All Present</button>
+                <button type="button" class="btn btn-sm btn-danger" onclick="setAllStatus('absent')" id="allAbsentBtn">All Absent</button>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="data-table" id="attendanceTable">
+                <thead>
+                    <tr>
+                        <th>Emp ID</th>
+                        <th>Name</th>
+                        <th>Status</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for emp in employees %}
+                    <tr id="row-{{ emp.id }}">
+                        <td><strong>{{ emp.employee_id }}</strong></td>
+                        <td>
+                            <div class="emp-cell">
+                                <div class="emp-avatar-sm">{{ emp.name.0 }}{{ emp.surname.0 }}</div>
+                                <span>{{ emp.full_name }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <select name="status_{{ emp.id }}" class="form-select attendance-select" id="status-{{ emp.id }}">
+                                <option value="present" {% if existing and emp.id in existing and existing|dictsort:"employee_id" %}{% endif %}>✅ Present</option>
+                                <option value="absent">❌ Absent</option>
+                                <option value="half_day">🔶 Half Day</option>
+                                <option value="casual_leave">🟡 Casual Leave</option>
+                            </select>
+                        </td>
+                        <td>
+                            <input type="text" name="notes_{{ emp.id }}" class="form-input" placeholder="Notes (optional)">
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer">
+            <button type="submit" class="btn btn-primary" id="saveAttendanceBtn">
+                <i class="fas fa-save"></i> Save Attendance
+            </button>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function setAllStatus(status) {
+    document.querySelectorAll('.attendance-select').forEach(select => {
+        select.value = status;
+        updateRowColor(select);
+    });
+}
+
+function updateRowColor(select) {
+    const row = select.closest('tr');
+    row.className = '';
+    if (select.value === 'present') row.classList.add('row-present');
+    else if (select.value === 'absent') row.classList.add('row-absent');
+    else if (select.value === 'half_day') row.classList.add('row-halfday');
+    else if (select.value === 'casual_leave') row.classList.add('row-casual');
+}
+
+document.querySelectorAll('.attendance-select').forEach(select => {
+    select.addEventListener('change', function() { updateRowColor(this); });
+    updateRowColor(select);
+});
+</script>
+{% endblock %}

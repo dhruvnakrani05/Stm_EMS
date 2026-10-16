@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Delete Employee{% endblock %}
+{% block page_title %}Delete Employee{% endblock %}
+
+{% block content %}
+<div class="card card-form">
+    <div class="confirm-delete">
+        <i class="fas fa-exclamation-triangle text-danger" style="font-size: 3rem;"></i>
+        <h2>Remove Employee</h2>
+        <p>Employee: <strong>{{ employee.full_name }}</strong> ({{ employee.employee_id }})</p>
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-actions" style="flex-direction: column; gap: 0.75rem;">
+                <button type="submit" name="action" value="deactivate" class="btn btn-warning btn-full" id="deactivateBtn">
+                    <i class="fas fa-user-slash"></i> Deactivate (Recommended)
+                </button>
+                <button type="submit" name="action" value="delete" class="btn btn-danger btn-full" id="deleteBtn"
+                    onclick="return confirm('This will permanently delete all records. Continue?')">
+                    <i class="fas fa-trash"></i> Permanently Delete
+                </button>
+                <a href="{% url 'employees:detail' employee.pk %}" class="btn btn-outline btn-full">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

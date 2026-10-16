@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Employees{% endblock %}
+{% block page_title %}Employees{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <div class="header-stats">
+        <span class="header-stat"><i class="fas fa-users"></i> {{ total_count }} Total</span>
+        <span class="header-stat text-success"><i class="fas fa-circle"></i> {{ active_count }} Active</span>
+    </div>
+    {% if request.user.is_admin_user %}
+    <a href="{% url 'employees:create' %}" class="btn btn-primary" id="addEmployeeBtn">
+        <i class="fas fa-plus"></i> Add Employee
+    </a>
+    {% endif %}
+</div>
+
+<!-- Search & Filter -->
+<div class="card filter-card">
+    <form method="get" class="filter-form" id="searchForm">
+        <div class="filter-row">
+            {{ form.search }}
+            {{ form.status }}
+            <button type="submit" class="btn btn-primary btn-sm">
+                <i class="fas fa-search"></i> Search
+            </button>
+            {% if request.GET.search or request.GET.status %}
+            <a href="{% url 'employees:list' %}" class="btn btn-outline btn-sm">
+                <i class="fas fa-times"></i> Clear
+            </a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<!-- Employee Cards Grid -->
+<div class="employee-grid">
+    {% for emp in employees %}
+    <div class="employee-card" id="emp-{{ emp.employee_id }}">
+        <a href="{% url 'employees:detail' emp.pk %}" class="employee-card-link">
+            <div class="emp-card-header">
+                {% if emp.profile_photo %}
+                <img src="{{ emp.profile_photo.url }}" alt="{{ emp.full_name }}" class="emp-avatar-img">
+                {% else %}
+                <div class="emp-avatar">{{ emp.name.0 }}{{ emp.surname.0 }}</div>
+                {% endif %}
+                <span class="emp-status {% if emp.is_active %}active{% else %}inactive{% endif %}">
+                    {{ emp.is_active|yesno:"Active,Inactive" }}
+                </span>
+            </div>
+            <div class="emp-card-body">
+                <h3>{{ emp.full_name }}</h3>
+                <span class="emp-id">{{ emp.employee_id }}</span>
+                <div class="emp-details">
+                    <span><i class="fas fa-map-marker-alt"></i> {{ emp.city }}</span>
+                    <span><i class="fas fa-phone"></i> {{ emp.mobile_number }}</span>
+                </div>
+                <div class="emp-salary">
+                    <span class="salary-label">Salary</span>
+                    <span class="salary-value">₹{{ emp.basic_salary|floatformat:0 }}</span>
+                </div>
+            </div>
+        </a>
+        {% if request.user.is_admin_user %}
+        <div class="emp-card-actions">
+            <a href="{% url 'employees:edit' emp.pk %}" class="btn btn-sm btn-outline" title="Edit">
+                <i class="fas fa-edit"></i>
+            </a>
+            <a href="{% url 'employees:delete' emp.pk %}" class="btn btn-sm btn-danger" title="Delete">
+                <i class="fas fa-trash"></i>
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    {% empty %}
+    <div class="empty-state">
+        <i class="fas fa-users"></i>
+        <h3>No Employees Found</h3>
+        <p>{% if request.GET.search %}No employees match your search criteria.{% else %}Get started by adding your first employee.{% endif %}</p>
+        {% if request.user.is_admin_user %}
+        <a href="{% url 'employees:create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add Employee
+        </a>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Finalize Payroll Period{% endblock %}
+{% block page_title %}Finalize Payroll Period{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <a href="{% url 'payroll:list' %}" class="btn btn-outline" id="backToListBtn"><i class="fas fa-arrow-left"></i> Back</a>
+</div>
+
+<div class="card card-form">
+    <div class="alert alert-warning">
+        <i class="fas fa-exclamation-triangle"></i> <strong>Warning:</strong> Finalizing a payroll period will <strong>lock</strong> it. You will not be able to regenerate or modify any payroll records in this period after finalization.
+    </div>
+
+    <h3><i class="fas fa-lock"></i> Finalize: {{ period.get_month_display }} {{ period.year }}</h3>
+
+    <div class="payslip-grid" style="margin: 1.5rem 0;">
+        <div class="payslip-item"><span>Status</span><span class="badge badge-info">{{ period.get_status_display }}</span></div>
+        <div class="payslip-item"><span>Working Days</span><span>{{ period.total_working_days }}</span></div>
+        <div class="payslip-item"><span>Total Records</span><span>{{ records.count }}</span></div>
+        <div class="payslip-item"><span>Total Salary</span><span><strong>₹{{ total_salary|floatformat:0 }}</strong></span></div>
+    </div>
+
+    <div class="table-responsive" style="margin-bottom: 1.5rem;">
+        <table class="data-table" id="finalizePreviewTable">
+            <thead><tr><th>Employee</th><th>Base Salary</th><th>Deductions</th><th>Net Salary</th><th>Paid</th></tr></thead>
+            <tbody>
+                {% for record in records %}
+                <tr>
+                    <td>{{ record.employee.employee_id }} — {{ record.employee.full_name }}</td>
+                    <td>₹{{ record.base_salary|floatformat:0 }}</td>
+                    <td class="text-danger">-₹{{ record.total_deductions|floatformat:0 }}</td>
+                    <td><strong>₹{{ record.net_salary|floatformat:0 }}</strong></td>
+                    <td>
+                        <span class="badge badge-{% if record.is_paid %}success{% else %}warning{% endif %}">
+                            {% if record.is_paid %}Yes{% else %}No{% endif %}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <form method="post" id="finalizeForm">
+        {% csrf_token %}
+        <div class="form-actions">
+            <button type="submit" class="btn btn-warning" onclick="return confirm('Are you sure you want to finalize this period? This action cannot be undone.')" id="confirmFinalizeBtn">
+                <i class="fas fa-lock"></i> Confirm Finalize
+            </button>
+            <a href="{% url 'payroll:list' %}" class="btn btn-outline" id="cancelFinalizeBtn">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Modify Salary{% endblock %}
+{% block page_title %}Modify Salary{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <a href="{% url 'payroll:detail' record.pk %}" class="btn btn-outline" id="backToDetailBtn"><i class="fas fa-arrow-left"></i> Back</a>
+</div>
+
+{% if not record.period.can_modify %}
+<div class="alert alert-danger">
+    <i class="fas fa-exclamation-triangle"></i> This payroll period is <strong>{{ record.period.get_status_display }}</strong> and cannot be modified.
+</div>
+{% else %}
+<div class="card card-form">
+    <h3>{{ record.employee.full_name }} — {{ record.get_month_display }} {{ record.year }}</h3>
+    <p class="text-muted">Current Net Salary: ₹{{ record.net_salary|floatformat:2 }}</p>
+
+    {% if record.salary_modified %}
+    <div class="alert alert-info" style="margin-bottom: 1rem;">
+        <i class="fas fa-info-circle"></i> This record was previously modified{% if record.modified_by %} by {{ record.modified_by.get_full_name|default:record.modified_by.username }}{% endif %}.
+        {% if record.modification_note %}<br>Previous note: {{ record.modification_note }}{% endif %}
+    </div>
+    {% endif %}
+
+    <form method="post" id="modifySalaryForm">
+        {% csrf_token %}
+        {% for field in form %}
+        <div class="form-group">
+            <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="required">*</span>{% endif %}</label>
+            {{ field }}
+            {% if field.help_text %}<span class="form-help">{{ field.help_text }}</span>{% endif %}
+            {% if field.errors %}<span class="form-error">{{ field.errors.0 }}</span>{% endif %}
+        </div>
+        {% endfor %}
+
+        <div class="alert alert-warning" style="margin-top: 1rem;">
+            <i class="fas fa-history"></i> All modifications are logged in the audit trail with before/after values.
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary" id="saveModifyBtn"><i class="fas fa-save"></i> Save Changes</button>
+            <a href="{% url 'payroll:detail' record.pk %}" class="btn btn-outline" id="cancelModifyBtn">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endif %}
+{% endblock %}

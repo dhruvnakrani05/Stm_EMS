@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Login{% endblock %}
+
+{% block content_login %}
+<div class="login-container">
+    <div class="login-card">
+        <div class="login-header">
+            <div class="login-logo">
+                <i class="fas fa-building"></i>
+            </div>
+            <h1>Employee Management System</h1>
+            <p>Sign in to your account</p>
+        </div>
+        <form method="post" class="login-form" id="loginForm">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="id_username"><i class="fas fa-user"></i> Username</label>
+                {{ form.username }}
+                {% if form.username.errors %}
+                <span class="form-error">{{ form.username.errors.0 }}</span>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <label for="id_password"><i class="fas fa-lock"></i> Password</label>
+                {{ form.password }}
+                {% if form.password.errors %}
+                <span class="form-error">{{ form.password.errors.0 }}</span>
+                {% endif %}
+            </div>
+            {% if form.non_field_errors %}
+            <div class="form-error-box">
+                {% for error in form.non_field_errors %}
+                <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+            <button type="submit" class="btn btn-primary btn-full" id="loginSubmit">
+                <i class="fas fa-sign-in-alt"></i> Sign In
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

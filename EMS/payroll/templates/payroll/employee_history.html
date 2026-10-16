@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}{{ employee.full_name }} - Payroll History{% endblock %}
+{% block page_title %}Payroll History{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <div>
+        <h2>{{ employee.full_name }} <span class="text-muted">({{ employee.employee_id }})</span></h2>
+    </div>
+    <a href="{% url 'employees:detail' employee.pk %}" class="btn btn-outline" id="backToProfileBtn"><i class="fas fa-arrow-left"></i> Back to Profile</a>
+</div>
+
+{% for yd in yearly_data %}
+<div class="card" style="margin-bottom: 1rem;">
+    <div class="card-header">
+        <h3><i class="fas fa-calendar"></i> {{ yd.year }}</h3>
+        <div class="header-stats">
+            <span class="header-stat">Total: ₹{{ yd.total_salary|floatformat:0 }}</span>
+            <span class="header-stat text-success">Paid: ₹{{ yd.total_paid|floatformat:0 }}</span>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead><tr><th>Month</th><th>Working Days</th><th>Present</th><th>Absent</th><th>Base Salary</th><th>Deductions</th><th>Advances</th><th>Net Salary</th><th>Status</th></tr></thead>
+            <tbody>
+                {% for record in yd.records %}
+                <tr>
+                    <td><a href="{% url 'payroll:detail' record.pk %}">{{ record.get_month_display }}</a></td>
+                    <td>{{ record.total_working_days }}</td>
+                    <td class="text-success">{{ record.days_present }}</td>
+                    <td class="text-danger">{{ record.days_absent }}</td>
+                    <td>₹{{ record.base_salary|floatformat:0 }}</td>
+                    <td class="text-danger">-₹{{ record.attendance_deduction|floatformat:0 }}</td>
+                    <td class="text-warning">-₹{{ record.total_advances|floatformat:0 }}</td>
+                    <td><strong>₹{{ record.net_salary|floatformat:0 }}</strong></td>
+                    <td>
+                        <span class="badge badge-{% if record.is_paid %}success{% else %}warning{% endif %}">{% if record.is_paid %}Paid{% else %}Unpaid{% endif %}</span>
+                        {% if record.salary_modified %}<span class="badge badge-info">Modified</span>{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% empty %}
+<div class="empty-state">
+    <i class="fas fa-money-bill-wave"></i>
+    <h3>No Payroll Records</h3>
+    <p>No payroll has been generated for this employee yet.</p>
+</div>
+{% endfor %}
+
+{% if advances %}
+<div class="card">
+    <div class="card-header"><h3><i class="fas fa-hand-holding-usd"></i> All Salary Advances</h3></div>
+    <div class="table-responsive">
+        <table class="data-table" id="employeeAdvancesTable">
+            <thead><tr><th>Date</th><th>Amount</th><th>Status</th><th>Reason</th></tr></thead>
+            <tbody>
+                {% for adv in advances %}
+                <tr>
+                    <td>{{ adv.date|date:"d M Y" }}</td>
+                    <td class="text-warning">₹{{ adv.amount|floatformat:0 }}</td>
+                    <td>
+                        <span class="badge badge-{% if adv.status == 'pending' %}warning{% elif adv.status == 'deducted' %}success{% else %}danger{% endif %}">
+                            {{ adv.get_status_display }}
+                        </span>
+                    </td>
+                    <td>{{ adv.reason|default:"—" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

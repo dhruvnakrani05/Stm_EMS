@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}{{ employee.full_name }} - Attendance{% endblock %}
+{% block page_title %}Employee Attendance{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <div>
+        <h2>{{ employee.full_name }} <span class="text-muted">({{ employee.employee_id }})</span></h2>
+    </div>
+    <a href="{% url 'employees:detail' employee.pk %}" class="btn btn-outline">
+        <i class="fas fa-arrow-left"></i> Back to Profile
+    </a>
+</div>
+
+<!-- View Toggle -->
+<div class="view-toggle">
+    <a href="?view=daily&month={{ month }}&year={{ year }}" class="toggle-btn {% if view_type == 'daily' %}active{% endif %}">Daily</a>
+    <a href="?view=monthly&month={{ month }}&year={{ year }}" class="toggle-btn {% if view_type == 'monthly' %}active{% endif %}">Monthly</a>
+    <a href="?view=yearly&year={{ year }}" class="toggle-btn {% if view_type == 'yearly' %}active{% endif %}">Yearly</a>
+</div>
+
+{% if view_type == 'monthly' %}
+<!-- Month Navigation -->
+<div class="date-nav">
+    <a href="?view=monthly&month={% if month == 1 %}12{% else %}{{ month|add:"-1" }}{% endif %}&year={% if month == 1 %}{{ year|add:"-1" }}{% else %}{{ year }}{% endif %}" class="btn btn-outline btn-sm">
+        <i class="fas fa-chevron-left"></i>
+    </a>
+    <h3>{{ month_name }} {{ year }}</h3>
+    <a href="?view=monthly&month={% if month == 12 %}1{% else %}{{ month|add:"1" }}{% endif %}&year={% if month == 12 %}{{ year|add:"1" }}{% else %}{{ year }}{% endif %}" class="btn btn-outline btn-sm">
+        <i class="fas fa-chevron-right"></i>
+    </a>
+</div>
+
+<!-- Stats -->
+<div class="mini-stats">
+    <div class="mini-stat present"><span class="mini-value">{{ present }}</span><span class="mini-label">Present</span></div>
+    <div class="mini-stat absent"><span class="mini-value">{{ absent }}</span><span class="mini-label">Absent</span></div>
+    <div class="mini-stat halfday"><span class="mini-value">{{ half_day }}</span><span class="mini-label">Half Day</span></div>
+    <div class="mini-stat casual"><span class="mini-value">{{ casual }}</span><span class="mini-label">Casual Leave</span></div>
+</div>
+
+<!-- Calendar Grid -->
+<div class="card">
+    <div class="calendar-grid">
+        <div class="cal-header">Mon</div>
+        <div class="cal-header">Tue</div>
+        <div class="cal-header">Wed</div>
+        <div class="cal-header">Thu</div>
+        <div class="cal-header">Fri</div>
+        <div class="cal-header">Sat</div>
+        <div class="cal-header">Sun</div>
+        {% for week in month_days %}
+            {% for day in week %}
+                {% if day == 0 %}
+                <div class="cal-day empty"></div>
+                {% else %}
+                <div class="cal-day {% if day in attendance_map %}{{ attendance_map|dictsort:'status' }}{% endif %}
+                    {% for d, rec in attendance_map.items %}{% if d == day %}cal-{{ rec.status }}{% endif %}{% endfor %}">
+                    <span class="day-num">{{ day }}</span>
+                    {% for d, rec in attendance_map.items %}
+                        {% if d == day %}
+                        <span class="day-status">{{ rec.get_status_display }}</span>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            {% endfor %}
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Records Table -->
+<div class="card" style="margin-top: 1rem;">
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead><tr><th>Date</th><th>Day</th><th>Status</th><th>Notes</th></tr></thead>
+            <tbody>
+                {% for rec in records %}
+                <tr>
+                    <td>{{ rec.date|date:"d M Y" }}</td>
+                    <td>{{ rec.date|date:"l" }}</td>
+                    <td><span class="status-badge {{ rec.status_color }}">{{ rec.get_status_display }}</span></td>
+                    <td>{{ rec.notes|default:"—" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="text-center text-muted">No attendance records for this month.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% elif view_type == 'yearly' %}
+<!-- Year Navigation -->
+<div class="date-nav">
+    <a href="?view=yearly&year={{ year|add:'-1' }}" class="btn btn-outline btn-sm"><i class="fas fa-chevron-left"></i></a>
+    <h3>{{ year }}</h3>
+    <a href="?view=yearly&year={{ year|add:'1' }}" class="btn btn-outline btn-sm"><i class="fas fa-chevron-right"></i></a>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr><th>Month</th><th>Present</th><th>Absent</th><th>Half Day</th><th>Casual Leave</th><th>Total</th></tr>
+            </thead>
+            <tbody>
+                {% for md in monthly_data %}
+                <tr>
+                    <td>
+                        <a href="?view=monthly&month={{ md.month_num }}&year={{ year }}">{{ md.month }}</a>
+                    </td>
+                    <td class="text-success">{{ md.present }}</td>
+                    <td class="text-danger">{{ md.absent }}</td>
+                    <td class="text-warning">{{ md.half_day }}</td>
+                    <td class="text-info">{{ md.casual }}</td>
+                    <td><strong>{{ md.total }}</strong></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% else %}
+<!-- Daily view - recent records -->
+<div class="card">
+    <div class="card-header"><h3>Recent 90 Days</h3></div>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead><tr><th>Date</th><th>Day</th><th>Status</th><th>Notes</th></tr></thead>
+            <tbody>
+                {% for rec in records %}
+                <tr>
+                    <td>{{ rec.date|date:"d M Y" }}</td>
+                    <td>{{ rec.date|date:"l" }}</td>
+                    <td><span class="status-badge {{ rec.status_color }}">{{ rec.get_status_display }}</span></td>
+                    <td>{{ rec.notes|default:"—" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="text-center text-muted">No attendance records.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

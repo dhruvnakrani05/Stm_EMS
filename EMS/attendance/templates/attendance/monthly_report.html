@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Monthly Attendance Report{% endblock %}
+{% block page_title %}Monthly Attendance Report{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <div>
+        <p class="text-muted">{{ month_name }} {{ year }} · {{ working_days }} working days</p>
+    </div>
+    <form method="get" class="inline-form">
+        <select name="month" class="form-select" onchange="this.form.submit()">
+            {% for m in "123456789" %}
+            <option value="{{ forloop.counter }}" {% if forloop.counter == month %}selected{% endif %}>
+                {{ forloop.counter }}
+            </option>
+            {% endfor %}
+            <option value="10" {% if month == 10 %}selected{% endif %}>10</option>
+            <option value="11" {% if month == 11 %}selected{% endif %}>11</option>
+            <option value="12" {% if month == 12 %}selected{% endif %}>12</option>
+        </select>
+        <input type="number" name="year" value="{{ year }}" class="form-input" style="width: 100px;" onchange="this.form.submit()">
+    </form>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="data-table" id="monthlyReportTable">
+            <thead>
+                <tr>
+                    <th>Emp ID</th>
+                    <th>Name</th>
+                    <th class="text-center">Present</th>
+                    <th class="text-center">Absent</th>
+                    <th class="text-center">Half Day</th>
+                    <th class="text-center">Casual Leave</th>
+                    <th class="text-center">Total</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for data in employee_data %}
+                <tr>
+                    <td><strong>{{ data.employee.employee_id }}</strong></td>
+                    <td>
+                        <a href="{% url 'employees:detail' data.employee.pk %}">{{ data.employee.full_name }}</a>
+                    </td>
+                    <td class="text-center text-success"><strong>{{ data.present }}</strong></td>
+                    <td class="text-center text-danger"><strong>{{ data.absent }}</strong></td>
+                    <td class="text-center text-warning"><strong>{{ data.half_day }}</strong></td>
+                    <td class="text-center text-info"><strong>{{ data.casual }}</strong></td>
+                    <td class="text-center"><strong>{{ data.total }}</strong></td>
+                    <td>
+                        <a href="{% url 'attendance:employee' data.employee.pk %}?view=monthly&month={{ month }}&year={{ year }}" 
+                           class="btn btn-sm btn-outline" title="View Details">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

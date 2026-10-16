@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Delete User{% endblock %}
+{% block page_title %}Delete User{% endblock %}
+
+{% block content %}
+<div class="card card-form">
+    <div class="confirm-delete">
+        <i class="fas fa-exclamation-triangle text-danger" style="font-size: 3rem;"></i>
+        <h2>Delete User</h2>
+        <p>Are you sure you want to delete user <strong>{{ user_obj.username }}</strong> ({{ user_obj.get_role_display }})?</p>
+        <p class="text-muted">This action cannot be undone.</p>
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-actions">
+                <button type="submit" class="btn btn-danger" id="confirmDeleteBtn">
+                    <i class="fas fa-trash"></i> Yes, Delete
+                </button>
+                <a href="{% url 'accounts:user_list' %}" class="btn btn-outline">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

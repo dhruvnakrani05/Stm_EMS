@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}{% if editing %}Edit{% else %}Add{% endif %} Salary Advance{% endblock %}
+{% block page_title %}{% if editing %}Edit{% else %}Record{% endif %} Salary Advance{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <a href="{% url 'payroll:advances' %}" class="btn btn-outline" id="backToAdvancesBtn"><i class="fas fa-arrow-left"></i> Back</a>
+</div>
+
+<div class="card card-form">
+    <form method="post" id="advanceForm">
+        {% csrf_token %}
+        {% for field in form %}
+        <div class="form-group">
+            <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="required">*</span>{% endif %}</label>
+            {{ field }}
+            {% if field.errors %}<span class="form-error">{{ field.errors.0 }}</span>{% endif %}
+        </div>
+        {% endfor %}
+
+        <div class="alert alert-info" style="margin-top: 1rem;">
+            <i class="fas fa-info-circle"></i> Advances are tracked with status: <strong>Pending</strong> → <strong>Deducted</strong> (when payroll is generated). Pending advances can be edited or deleted. Deducted advances cannot be modified.
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary" id="saveAdvanceBtn"><i class="fas fa-save"></i> {% if editing %}Update{% else %}Record{% endif %} Advance</button>
+            <a href="{% url 'payroll:advances' %}" class="btn btn-outline" id="cancelAdvanceBtn">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

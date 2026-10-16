@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Generate Payroll{% endblock %}
+{% block page_title %}Generate Payroll{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <p class="text-muted">Generate monthly payroll based on attendance records and salary advances</p>
+</div>
+
+{% if existing_period and not existing_period.can_modify %}
+<div class="alert alert-warning">
+    <i class="fas fa-lock"></i> <strong>Period Locked:</strong> Payroll for {{ existing_period.get_month_display }} {{ existing_period.year }} is already <strong>{{ existing_period.get_status_display }}</strong> and cannot be regenerated.
+</div>
+{% endif %}
+
+<div class="card card-form">
+    <form method="post" id="generatePayrollForm">
+        {% csrf_token %}
+        <div class="form-row">
+            {% for field in form %}
+            <div class="form-group">
+                <label>{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}<span class="form-error">{{ field.errors.0 }}</span>{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> This will generate payroll for <strong>{{ total_employees }}</strong> active employees based on their attendance records and pending salary advances for the selected month.
+        </div>
+
+        <div class="alert alert-info" style="margin-top: 0.5rem;">
+            <i class="fas fa-shield-alt"></i> <strong>ACID Guarantee:</strong> Payroll is generated atomically — either all records are created successfully, or no changes are made. Manually modified records are preserved.
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="generateBtn">
+            <i class="fas fa-calculator"></i> Generate Payroll
+        </button>
+    </form>
+</div>
+
+{% if preview %}
+<div class="card" style="margin-top: 1rem;">
+    <div class="card-header"><h3><i class="fas fa-eye"></i> Employee Preview</h3></div>
+    <div class="table-responsive">
+        <table class="data-table" id="previewTable">
+            <thead><tr><th>Emp ID</th><th>Name</th><th>Base Salary</th></tr></thead>
+            <tbody>
+                {% for p in preview %}
+                <tr>
+                    <td>{{ p.employee.employee_id }}</td>
+                    <td>{{ p.employee.full_name }}</td>
+                    <td>₹{{ p.base_salary|floatformat:0 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

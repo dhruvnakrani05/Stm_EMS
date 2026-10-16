@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Yearly Payroll Summary{% endblock %}
+{% block page_title %}Yearly Payroll Summary{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <div class="date-nav">
+        <a href="?year={{ year|add:'-1' }}" class="btn btn-outline btn-sm" id="prevYearBtn"><i class="fas fa-chevron-left"></i></a>
+        <h3>{{ year }}</h3>
+        <a href="?year={{ year|add:'1' }}" class="btn btn-outline btn-sm" id="nextYearBtn"><i class="fas fa-chevron-right"></i></a>
+    </div>
+    <div class="header-stats">
+        <span class="header-stat">Grand Total: ₹{{ grand_total|floatformat:0 }}</span>
+        <span class="header-stat text-success">Paid: ₹{{ total_paid|floatformat:0 }}</span>
+    </div>
+</div>
+
+<div class="card chart-card">
+    <div class="card-header"><h3><i class="fas fa-chart-bar"></i> Monthly Salary Trend</h3></div>
+    <div class="card-body"><canvas id="yearlySalaryChart" height="300"></canvas></div>
+</div>
+
+<div class="card" style="margin-top: 1rem;">
+    <div class="card-header"><h3>Monthly Breakdown</h3></div>
+    <div class="table-responsive">
+        <table class="data-table" id="monthlyBreakdownTable">
+            <thead><tr><th>Month</th><th>Records</th><th>Total Salary</th><th>Paid</th><th>Unpaid</th></tr></thead>
+            <tbody>
+                {% for mt in monthly_totals %}
+                <tr>
+                    <td><a href="{% url 'payroll:list' %}?month={{ forloop.counter }}&year={{ year }}">{{ mt.month }}</a></td>
+                    <td>{{ mt.count }}</td>
+                    <td>₹{{ mt.total|floatformat:0 }}</td>
+                    <td class="text-success">₹{{ mt.paid|floatformat:0 }}</td>
+                    <td class="text-warning">₹{{ mt.unpaid|floatformat:0 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card" style="margin-top: 1rem;">
+    <div class="card-header"><h3>Employee-wise Total</h3></div>
+    <div class="table-responsive">
+        <table class="data-table" id="employeeTotalsTable">
+            <thead><tr><th>Employee</th><th>Total Salary</th><th>Paid</th></tr></thead>
+            <tbody>
+                {% for et in employee_totals %}
+                <tr>
+                    <td><a href="{% url 'payroll:employee_history' et.employee.pk %}">{{ et.employee.employee_id }} - {{ et.employee.full_name }}</a></td>
+                    <td>₹{{ et.total|floatformat:0 }}</td>
+                    <td class="text-success">₹{{ et.paid|floatformat:0 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('yearlySalaryChart');
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: [{% for mt in monthly_totals %}'{{ mt.month_abbr }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+                datasets: [{
+                    label: 'Total', data: [{% for mt in monthly_totals %}{{ mt.total }}{% if not forloop.last %},{% endif %}{% endfor %}],
+                    backgroundColor: 'rgba(124,58,237,0.6)', borderRadius: 6
+                },{
+                    label: 'Paid', data: [{% for mt in monthly_totals %}{{ mt.paid }}{% if not forloop.last %},{% endif %}{% endfor %}],
+                    backgroundColor: 'rgba(16,185,129,0.6)', borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { labels: { color: '#94a3b8' } } },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: 'rgba(148,163,184,0.1)' }, ticks: { color: '#94a3b8' } },
+                    x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
